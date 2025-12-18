@@ -82,13 +82,4 @@ The dataset contains hotel review records across multiple European countries.
 - **July–August**: Peak period where demand is naturally high; focus on **revenue management**, **capacity optimisation**, and **maintaining service quality** under high load.
 - **November**: Low-demand period where **marketing, promotions, and differentiated experiences** can help stimulate demand.
 
-## 8. Suggested Next Steps
 
-For future analysis and presentations, consider:
-
-- Performing **sentiment analysis** on review text (if available) to understand detailed drivers of satisfaction and dissatisfaction by country.
-- Segmenting hotels by **category** (e.g., star rating, chain vs independent) to identify which segments over- or under-perform.
-- Extending the **time horizon with more recent data** to track trends over multiple years and validate whether observed patterns persist.
-- Linking ratings and review trends to key business metrics such as **ADR (Average Daily Rate)**, **occupancy**, and **RevPAR** to **quantify financial impact**.
-
-This summary can be used directly as a project-level narrative (`summary.md`) to document the key EDA findings in a concise, business-friendly markdown format.
