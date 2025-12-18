@@ -63,8 +63,4 @@ def recommend_hotel(country, description, top_n=5):
 
 
 
-print(recommend_hotel("uK","I want a hotel with good food and swimming pool"))
-
-
-
 

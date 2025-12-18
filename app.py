@@ -94,6 +94,8 @@ if 'custom_desc' not in st.session_state:
     st.session_state.custom_desc = ""
 if 'recommendations' not in st.session_state:
     st.session_state.recommendations = None
+if 'num_recommendations' not in st.session_state:
+    st.session_state.num_recommendations = 5
 
 # Country data
 countries = {
@@ -121,8 +123,8 @@ preferences_data = [
 
 def step_1_country_selection():
     """Step 1: Country Selection"""
-    st.markdown("<h2 style='text-align: center; font-size: 2.25rem; font-weight: 700; color: white; margin-bottom: 0.75rem;'>Select Your Destination</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.125rem; color: #D6CFC7; margin-bottom: 3rem; font-weight: 400;'>Choose a country to discover the best hotels matching your preferences</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; font-size: 2.25rem; font-weight: 700; color: #222021; margin-bottom: 0.75rem;'>Select Your Destination</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.125rem; color: #3E424B; margin-bottom: 3rem; font-weight: 400;'>Choose a country to discover the best hotels matching your preferences</p>", unsafe_allow_html=True)
     
     cols = st.columns(3)
     for idx, (country, data) in enumerate(countries.items()):
@@ -151,8 +153,8 @@ def step_1_country_selection():
 
 def step_2_preferences():
     """Step 2: Travel Preferences"""
-    st.markdown("<h2 style='text-align: center; font-size: 2.25rem; font-weight: 700; color: white; margin-bottom: 0.75rem;'>Choose Your Travel Preferences</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.125rem; color: #D6CFC7; margin-bottom: 2rem; font-weight: 400;'>Select one or more options that best describe your ideal stay</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; font-size: 2.25rem; font-weight: 700; color: #222021; margin-bottom: 0.75rem;'>Choose Your Travel Preferences</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; font-size: 1.125rem; color: #3E424B; margin-bottom: 2rem; font-weight: 400;'>Select one or more options that best describe your ideal stay</p>", unsafe_allow_html=True)
     
     # --- Selected Preferences Summary ---
     if st.session_state.preferences:
@@ -194,17 +196,54 @@ def step_2_preferences():
                     st.session_state.preferences.append(pref['label'])
                 st.rerun()
     
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    st.markdown("### Additional Requirements (Optional)")
+    # ---------- Additional Requirements ----------
+    st.markdown(
+        "<h4 style='color:#222021;'>Additional Requirements (Optional)</h4>",
+        unsafe_allow_html=True
+    )
+
     st.session_state.custom_desc = st.text_area(
-        "Additional Requirements",
+        label="Additional Requirements",
         value=st.session_state.custom_desc,
-        placeholder="e.g., 'Need parking facilities, spa access, and proximity to city center'",
+        placeholder="e.g., Need parking facilities, spa access, and proximity to city center",
         height=100,
         label_visibility="collapsed"
     )
-    
+
+    st.markdown("---")
+
+    # ---------- Number of Recommendations ----------
+    st.markdown(
+        "<h4 style='text-align:center; color:#222021;'>🔢 Number of Recommendations</h4>",
+        unsafe_allow_html=True
+    )
+
+    st.session_state.num_recommendations = st.slider(
+        label="Number of hotels",
+        min_value=5,
+        max_value=20,
+        value=st.session_state.num_recommendations,
+        step=1,
+        label_visibility="collapsed"
+    )
+
+    st.markdown(
+        f"""
+        <div style='text-align:center;
+                    background:#f1f5f9;
+                    padding:0.6rem;
+                    border-radius:8px;
+                    font-weight:600;
+                    color:#1E40AF;'>
+            Selected: {st.session_state.num_recommendations} hotels
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+ 
     st.markdown("<br>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -224,66 +263,79 @@ def step_2_preferences():
 
 def step_3_results():
     """Step 3: Show Recommendations"""
-    
+
     if st.session_state.recommendations is None:
         # Combine preferences
         combined_desc = ""
         if st.session_state.preferences:
-            selected_prefs = [p for p in preferences_data if p['label'] in st.session_state.preferences]
-            combined_desc = " ".join([p['desc'] for p in selected_prefs])
-        if st.session_state.custom_desc.strip():
-            combined_desc += " " + st.session_state.custom_desc.strip() if combined_desc else st.session_state.custom_desc.strip()
-        
-        # Get recommendations
-        with st.spinner("Analyzing preferences with your model..."):
-            
-            try:
-                # Call your model exactly like in your notebook
-                results = recommend_hotel(
-    st.session_state.country.lower(),
-    combined_desc
-)
+            selected_prefs = [
+                p for p in preferences_data
+                if p['label'] in st.session_state.preferences
+            ]
+            combined_desc = " ".join(p['desc'] for p in selected_prefs)
 
-                
+        if st.session_state.custom_desc.strip():
+            combined_desc += " " + st.session_state.custom_desc.strip()
+
+        with st.spinner("Analyzing preferences with your model..."):
+            try:
+                results = recommend_hotel(
+                    st.session_state.country.lower(),
+                    combined_desc,
+                    top_n=st.session_state.num_recommendations
+                )
                 st.session_state.recommendations = results
                 time.sleep(1)
-                
+
             except Exception as e:
                 st.error(f"❌ Error: {e}")
-                import traceback
-                with st.expander("Show error details"):
-                    st.code(traceback.format_exc())
                 st.session_state.recommendations = pd.DataFrame()
-        
+
         st.rerun()
-    
-    # Display results
-    if st.session_state.recommendations is not None and not st.session_state.recommendations.empty:
+
+    # ---------------- DISPLAY ----------------
+    if not st.session_state.recommendations.empty:
         st.markdown(
-    f"<h3 style='color: black;'>🎉 Recommended Hotels in {st.session_state.country}</h3>",
-    unsafe_allow_html=True
-)
-        st.markdown(f"<p style='color: black;'>Showing recommendations...</p>", unsafe_allow_html=True)
+            f"<h3 style='color:black;'>🎉 Recommended Hotels in {st.session_state.country}</h3>",
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            f"<p style='color:black;'>Showing "
+            f"<b>{len(st.session_state.recommendations)}</b> "
+            f"hotels based on your selections...</p>",
+            unsafe_allow_html=True
+        )
+
         st.markdown("---")
-        
-        for idx in range(len(st.session_state.recommendations)):
-            row = st.session_state.recommendations.iloc[idx]
-            
+
+        for _, row in st.session_state.recommendations.iterrows():
             col1, col2 = st.columns([4, 1])
-            
+
             with col1:
-                st.markdown(f"<h2 style='color: black;'>{row['hotel_name']}</h2>",unsafe_allow_html=True)
-                st.markdown(f"<p style='color: black;'>📍 {row['hotel_address']}</p>", unsafe_allow_html=True)
-            
+                st.markdown(
+                    f"<h2 style='color:black;'>{row['hotel_name']}</h2>",
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f"<p style='color:black;'>📍 {row['hotel_address']}</p>",
+                    unsafe_allow_html=True
+                )
+
             with col2:
-                st.markdown(f"<div style='background: #1E40AF; color: white; padding: 0.7rem; border-radius: 0.7rem; text-align: center; font-size: 1.2rem; font-weight: bold;'>⭐ {row['final_rating']}</div>", unsafe_allow_html=True)
-            
-            st.markdown("<hr style='border: 1px solid #48494B;'>", unsafe_allow_html=True)
-    
+                st.markdown(
+                    f"<div style='background:#1E40AF;color:white;"
+                    f"padding:0.7rem;border-radius:0.7rem;"
+                    f"text-align:center;font-size:1.2rem;font-weight:bold;'>"
+                    f"⭐ {row['final_rating']}</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown("<hr style='border:1px solid #48494B;'>", unsafe_allow_html=True)
+
     else:
         st.warning("⚠️ No hotels found. Try different preferences.")
-        with st.expander("Debug Info"):
-            st.write("Recommendations:", st.session_state.recommendations)
+
     
     # Navigation
     st.markdown("<br>", unsafe_allow_html=True)
@@ -321,6 +373,7 @@ def main():
         step_2_preferences()
     elif st.session_state.step == 3:
         step_3_results()
+    
 
 if __name__ == "__main__":
     main()
